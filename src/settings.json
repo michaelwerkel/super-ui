@@ -1,0 +1,7 @@
+{
+	"commands":{
+		"list_compose_stacks": "docker ps -a --format=\"json\"",
+		"list_swarm_stacks": "docker stack ls --format=\"json\"",
+		"ssh": "ssh root@{host} {command}"
+	}
+}

@@ -1,0 +1,7 @@
+services:
+    ui:
+        image: super-ui:dev
+        ports: ["127.0.0.1:5000:5000"]
+        volumes: ["/usr/bin/docker:/usr/bin/docker:ro", "/var/run/docker.sock:/var/run/docker.sock:ro"]
+        build:
+            context: src/
