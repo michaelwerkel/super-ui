@@ -1,0 +1,7 @@
+{% extends "_layout.html" %}
+{% block title %}Swarm Stacks{% endblock %}
+{% block content %}
+	{% for stack in swarmStacks %}
+		<a href="{{ url_for('swarmstack', stackname=stack) }}" >{{ stack }}</a>
+	{% endfor %}
+{% endblock %}

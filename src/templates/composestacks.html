@@ -1,0 +1,8 @@
+{% extends "_layout.html" %}
+{% block title %}Compose Stacks{% endblock %}
+{% block content %}
+	{{ errors }}
+	{% for stack in composeStacks %}
+		<a href="{{ url_for('composestack', stackname=stack) }}" >{{ stack }}</a>
+	{% endfor %}
+{% endblock %}

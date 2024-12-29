@@ -1,13 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    {% block head %}
-    <link rel="stylesheet" href="style.css" />
     <title>{% block title %}{% endblock %} - Super-UI</title>
-    {% endblock %}
+    {% block head %}{% endblock %}
 </head>
 <body>
-    <div id="content">{% block content %}{% endblock %}</div>
+    <div id="content">{{ errors }}{% block content %}{% endblock %}</div>
     <div id="footer">
         {% block footer %}
         &copy; Copyright 2024 by led_michael.
