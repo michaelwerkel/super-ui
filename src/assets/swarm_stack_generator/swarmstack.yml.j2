@@ -1,0 +1,135 @@
+version: "3"
+
+{# 
+TODO:
+- Configs
+- Networks
+- Volumes
+- Secrets
+- Service device_cgroup_rules
+- Service devices
+- Service env_file
+ #}
+
+{% macro yaml_str_list(key, list, listItem, isDict=false) %}
+{% if listItem in list and list[listItem] | length > 0 %}
+{{ key }}:
+  {% if isDict %}
+  {% for key, item in list[listItem].items() %}
+  - "{{ key }}={{ item }}"
+  {% endfor %}
+  {% else %}
+  {% for item in list[listItem] %}
+  - "{{ item }}"
+  {% endfor %}
+  {% endif %}
+{% endif %}
+{% endmacro %}
+{% macro yaml_obj_list_str(key, list, listItem) %}
+{% if listItem in list and list[listItem] | length > 0 %}
+{{ key }}:
+  {% for obj in list[listItem] %}
+  {{ "-" }} {{ obj.keys() | list | first | lower }}: {{ obj }}
+  {# TODO: Implement for multiple children. #}
+  {#- {{ obj.keys() | list | first | lower }}: {{ obj.values() | list | first }}#}
+  {% endfor %}
+{% endif %}
+{% endmacro %}
+{% macro obj_has_any_child(dict) %}
+{% if dict | length > 0 %}
+{{ caller() }}
+{% endif %}
+{% endmacro %}
+
+{% if stack | length > 0 %}
+services:
+  {% for service in stack %}
+  {{ service.Spec.Name }}:
+    {{ yaml_str_list("cap_add", service.Spec.TaskTemplate.ContainerSpec, "CapabilityAdd") }}
+    {{ yaml_str_list("cap_drop", service.Spec.TaskTemplate.ContainerSpec, "CapabilityDrop") }}
+    {{ yaml_str_list("command", service.Spec.TaskTemplate.ContainerSpec, "Args") }}
+
+    deploy:
+      endpoint_mode: {{ service.Spec.EndpointSpec.Mode | default("dnsrr") }}
+      {{ yaml_str_list("labels", service.Spec, "Labels", true) }}
+      mode: {{ (service.Spec.Mode.keys() | list | first | lower or "replicated")}}
+      {#
+      placement:
+        {{ yaml_str_list("constraints", service.Spec.TaskTemplate.Placement, "Constraints") }}
+        {{ yaml_obj_list_str("preferences", service.Spec.TaskTemplate.Placement, "Preferences") }}
+      replicas: {% service.deploy.replicas or "1" %}
+      {% if obj_has_any_child(service.deploy.resources) %}
+      resources:
+        {% if obj_has_any_child(service.deploy.resources.limits) %}
+        limits:
+          cpus: {% service.deploy.resources.limits.cpus | default("1") %}
+          memory: {% service.deploy.resources.limits.memory | default("50M") %}
+          pids: {% service.deploy.resources.limits.pids | default("1") %}
+        {% endif %}
+        {% if obj_has_any_child(service.deploy.resources.reservations) %}
+        reservations:
+          cpus: {% service.deploy.resources.reservations.cpus | default("1") %}
+          memory: {% service.deploy.resources.reservations.memory | default("20M") %}
+        {% endif %}
+      {% endif %}
+      {% if obj_has_any_child(service.deploy.restart_policy) %}
+      restart_policy:
+        condition: {% service.deploy.restart_policy.condition | default("any") %}
+        delay: {% service.deploy.restart_policy.deplay | default("5s") %}
+        max_attempts: {% service.deploy.restart_policy.max_attempts | default("3") %}
+        window: {% service.deploy.restart_policy.window | default("120s") %}
+      {% endif %}
+      {% if obj_has_any_child(service.deploy.rollback_config) %}
+      rollback_config:
+        parallelism: {% service.deploy.rollback_config.parallelism | default("0") %}
+        delay: {% service.deploy.rollback_config.delay | default("0s") %}
+        failure_action: {% service.deploy.rollback_config.failure_action | default("pause") %}
+        monitor: {% service.deploy.rollback_config.monitor | default("0s") %}
+        max_failure_ratio: {% service.deploy.rollback_config.max_failure_ratio | default("0") %}
+        order: {% service.deploy.rollback_config.order | default("stop-first") %}
+      {% endif %}
+      {% if obj_has_any_child(service.deploy.update_config) %}
+      update_config:
+        parallelism: {% service.deploy.update_config.parallelism | default("0") %}
+        delay: {% service.deploy.update_config.delay | default("0s") %}
+        failure_action: {% service.deploy.update_config.failure_action | default("pause") %}
+        monitor: {% service.deploy.update_config.monitor | default("0s") %}
+        max_failure_ratio: {% service.deploy.update_config.max_failure_ratio | default("0") %}
+        order: {% service.deploy.update_config.order | default("stop-first") %}
+     {% endcall %}
+         #}
+     {{ yaml_str_list("dns", service.Spec.TaskTemplate.ContainerSpec.DNSConfig, "Nameservers") }}
+     {{ yaml_str_list("dns_search", service.Spec.TaskTemplate.ContainerSpec.DNSConfig, "Search") }}
+     domainname: {{ service.domainname | default("null") }}
+     {{ yaml_str_list("entrypoint", service.Spec.TaskTemplate, "Command") }}
+     {{ yaml_str_list("environment", service.Spec.TaskTemplate.ContainerSpec, "Env") }}
+     {# 
+     {{ yaml_str_list("extra_hosts", service.extra_hosts) }}
+     #}
+     {# 
+     {% if obj_has_any_child(service.healthcheck) %}
+     healthcheck:
+       {{ yaml_str_list("test", service.healthcheck.test) }}
+       interval: {% service.healthcheck.interval | default("1m30s") %}
+       timeout: {% service.healthcheck.timeout | default("10s") %}
+       retries: {% service.healthcheck.retries | default("3") %}
+       start_period: {% service.healthcheck.start_period | default("40s") %}
+       start_interval: {% service.healthcheck.start_interval | default("5s") %}
+     {% endif %}
+     #}
+     hostname: {{ service.Spec.TaskTemplate.ContainerSpec.Hostname | default("null") }}
+     image: {{ service.Spec.TaskTemplate.ContainerSpec.Image.split("@") | list | first | default("null") }}
+     init: {{ service.Spec.TaskTemplate.Init | default("false") }} 
+     {# 
+     isolation: {% service.isolation | default("null") %}
+     #}
+     {{ yaml_str_list("labels", service.Spec.TaskTemplate.ContainerSpec, "Labels") }}
+     {# 
+     {% if obj_has_any_child(service.logging) %}
+     logging:
+       driver: {% service.logging.driver | default("syslog") %}
+       {{ yaml_str_list("options", service.logging.options, true) }}
+     {% endif %}
+ #}
+  {% endfor %}
+{% endif %}

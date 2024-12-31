@@ -14,17 +14,6 @@ def getLastStdErr():
 	last_stderr = []
 	return last
 
-def yaml_str_list(key, strList, list_as_yaml_object):
-	retStr = ""
-	if len(strList) > 0:
-		retStr = key + ":"
-		for item in strList:
-			retStr = retStr + "\n  - \"" + item + "\""
-	return retStr
-
-def obj_has_any_child(obj):
-	return len(dir(obj)) > 0
-
 def render_command(settings, commandTemplate, stackName):
 	command = Template(commandTemplate).render(stackname=stackName)
 	return command
