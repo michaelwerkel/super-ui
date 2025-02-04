@@ -1,6 +1,6 @@
 version: "3"
 
-{# 
+{#- 
 TODO:
 - Configs
 - Networks
@@ -9,51 +9,52 @@ TODO:
 - Service device_cgroup_rules
 - Service devices
 - Service env_file
- #}
-
-{% macro yaml_str_list(key, list, listItem, isDict=false) %}
-{% if listItem in list and list[listItem] | length > 0 %}
+ -#}
+ {%- macro indent(indentation=0) %}
+ 
+ {% endmacro %}
+{%- macro yaml_str_list(key, list, listItem, isDict=false, indentation=0) %}
+{%- if listItem in list and list[listItem] | length > 0 %}
 {{ key }}:
-  {% if isDict %}
-  {% for key, item in list[listItem].items() %}
+  {%- if isDict %}
+  {%- for key, item in list[listItem].items() %}
   - "{{ key }}={{ item }}"
-  {% endfor %}
-  {% else %}
-  {% for item in list[listItem] %}
+  {%- endfor %}
+  {%- else %}
+  {%- for item in list[listItem] %}
   - "{{ item }}"
-  {% endfor %}
-  {% endif %}
-{% endif %}
-{% endmacro %}
-{% macro yaml_obj_list_str(key, list, listItem) %}
-{% if listItem in list and list[listItem] | length > 0 %}
+  {%- endfor %}
+  {%- endif %}
+{%- endif %}
+{%- endmacro %}
+{%- macro yaml_obj_list_str(key, list, listItem, indentation=0) %}
+{%- if listItem in list and list[listItem] | length > 0 %}
 {{ key }}:
-  {% for obj in list[listItem] %}
+  {%- for obj in list[listItem] %}
   {{ "-" }} {{ obj.keys() | list | first | lower }}: {{ obj }}
-  {# TODO: Implement for multiple children. #}
+  {# TODO: Implement for nested children. #}
   {#- {{ obj.keys() | list | first | lower }}: {{ obj.values() | list | first }}#}
-  {% endfor %}
-{% endif %}
-{% endmacro %}
-{% macro obj_has_any_child(dict) %}
-{% if dict | length > 0 %}
-{{ caller() }}
-{% endif %}
-{% endmacro %}
+  {%- endfor %}
+{%- endif %}
+{%- endmacro %}
+{%- macro obj_has_any_child(dict) %}
+{%- if dict | length > 0 %}
+{{- caller() }}
+{%- endif %}
+{%- endmacro %}
 
 {% if stack | length > 0 %}
 services:
-  {% for service in stack %}
+  {%- for service in stack %}
   {{ service.Spec.Name }}:
-    {{ yaml_str_list("cap_add", service.Spec.TaskTemplate.ContainerSpec, "CapabilityAdd") }}
-    {{ yaml_str_list("cap_drop", service.Spec.TaskTemplate.ContainerSpec, "CapabilityDrop") }}
-    {{ yaml_str_list("command", service.Spec.TaskTemplate.ContainerSpec, "Args") }}
-
+    {{- yaml_str_list("cap_add", service.Spec.TaskTemplate.ContainerSpec, "CapabilityAdd") | indent(4, True) }}
+    {{- yaml_str_list("cap_drop", service.Spec.TaskTemplate.ContainerSpec, "CapabilityDrop") | indent(4, True) }}
+    {{- yaml_str_list("command", service.Spec.TaskTemplate.ContainerSpec, "Args") | indent(4, True) }}
     deploy:
       endpoint_mode: {{ service.Spec.EndpointSpec.Mode | default("dnsrr") }}
-      {{ yaml_str_list("labels", service.Spec, "Labels", true) }}
+      {{- yaml_str_list("labels", service.Spec, "Labels", true) | indent(6, True) }}
       mode: {{ (service.Spec.Mode.keys() | list | first | lower or "replicated")}}
-      {#
+      {#-
       placement:
         {{ yaml_str_list("constraints", service.Spec.TaskTemplate.Placement, "Constraints") }}
         {{ yaml_obj_list_str("preferences", service.Spec.TaskTemplate.Placement, "Preferences") }}
@@ -98,38 +99,36 @@ services:
         order: {% service.deploy.update_config.order | default("stop-first") %}
      {% endcall %}
          #}
-     {{ yaml_str_list("dns", service.Spec.TaskTemplate.ContainerSpec.DNSConfig, "Nameservers") }}
-     {{ yaml_str_list("dns_search", service.Spec.TaskTemplate.ContainerSpec.DNSConfig, "Search") }}
+     {{- yaml_str_list("dns", service.Spec.TaskTemplate.ContainerSpec.DNSConfig, "Nameservers") | indent(4, True) }}
+     {{- yaml_str_list("dns_search", service.Spec.TaskTemplate.ContainerSpec.DNSConfig, "Search") | indent(4, True) }}
      domainname: {{ service.domainname | default("null") }}
-     {{ yaml_str_list("entrypoint", service.Spec.TaskTemplate, "Command") }}
-     {{ yaml_str_list("environment", service.Spec.TaskTemplate.ContainerSpec, "Env") }}
-     {# 
+     {{- yaml_str_list("entrypoint", service.Spec.TaskTemplate, "Command") | indent(4, True) }}
+     {{- yaml_str_list("environment", service.Spec.TaskTemplate.ContainerSpec, "Env") | indent(4, True) }}
+     {#-
      {{ yaml_str_list("extra_hosts", service.extra_hosts) }}
-     #}
-     {# 
-     {% if obj_has_any_child(service.healthcheck) %}
+     -#}
+     {%- if "Healthcheck" in service.Spec.TaskTemplate.ContainerSpec %}
      healthcheck:
-       {{ yaml_str_list("test", service.healthcheck.test) }}
-       interval: {% service.healthcheck.interval | default("1m30s") %}
+       {{- yaml_str_list("test", service.Spec.TaskTemplate.ContainerSpec.Healthcheck, "Test") | indent(7, True) }}
+       interval: {{ service.Spec.TaskTemplate.ContainerSpec.Healthcheck.Interval / 1000 | default("1m30s") }}us
+       {#-
        timeout: {% service.healthcheck.timeout | default("10s") %}
        retries: {% service.healthcheck.retries | default("3") %}
        start_period: {% service.healthcheck.start_period | default("40s") %}
        start_interval: {% service.healthcheck.start_interval | default("5s") %}
-     {% endif %}
-     #}
+       #}
+     {%- endif %}
      hostname: {{ service.Spec.TaskTemplate.ContainerSpec.Hostname | default("null") }}
      image: {{ service.Spec.TaskTemplate.ContainerSpec.Image.split("@") | list | first | default("null") }}
      init: {{ service.Spec.TaskTemplate.Init | default("false") }} 
-     {# 
+     {#-
      isolation: {% service.isolation | default("null") %}
      #}
-     {{ yaml_str_list("labels", service.Spec.TaskTemplate.ContainerSpec, "Labels") }}
-     {# 
-     {% if obj_has_any_child(service.logging) %}
+     {{- yaml_str_list("labels", service.Spec.TaskTemplate.ContainerSpec, "Labels") | indent(5, True) }}
+     {% if "LogDriver" in service.Spec.TaskTemplate %}
      logging:
-       driver: {% service.logging.driver | default("syslog") %}
-       {{ yaml_str_list("options", service.logging.options, true) }}
+       driver: {{ service.Spec.TaskTemplate.LogDriver.Name | default("syslog") }}
+       {{- yaml_str_list("options", service.Spec.TaskTemplate.LogDriver, "Options", true) | indent(7, True) }}
      {% endif %}
- #}
   {% endfor %}
 {% endif %}

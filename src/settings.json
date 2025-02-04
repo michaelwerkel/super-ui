@@ -3,7 +3,6 @@
 		"list_compose_stacks": "docker-compose ls --quiet --all",
 		"list_swarm_stacks": "docker stack ls --format \"{{ '{{' }} .Name {{ '}}' }}\"",
 		"generate_compose_stack": "docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/red5d/docker-autocompose $(docker ps --filter \"name={{ stackname }}\" --format \"{{ '{{' }} .ID {{ '}}' }}\")",
-		"generate_compose_swarm_stack_": "docker service inspect $(docker stack services {{ stackname }} --format {% raw %}\"{{ .Name }}\"{% endraw %}) | jinjanate --format=json /app/assets/var/swarm_stack_generator/swarmstack.yml.j2 -",
-		"generate_compose_swarm_stack": "echo { \\\"stack\\\": $(docker service inspect $(docker stack services {{ stackname }} --format {% raw %}\"{{ .Name }}\"{% endraw %})) } | jinjanate --format=json /app/assets/var/swarm_stack_generator/swarmstack.yml.j2 -"
+		"generate_compose_swarm_stack": "echo { \\\"stack\\\": $(docker service inspect $(docker stack services {{ stackname }} --format {% raw %}\"{{ .Name }}\"{% endraw %})) } | jinjanate --format=json /app/assets/swarm_stack_generator/swarmstack.yml.j2 -"
 	}
 }

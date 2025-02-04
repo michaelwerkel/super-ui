@@ -1,6 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request
 import json
 import dockercommands
+import logging
 
 settings = None
 with open("settings.json") as handle:
